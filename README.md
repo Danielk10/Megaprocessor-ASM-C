@@ -2,7 +2,7 @@
 
 **Ensamblador de código abierto para el Megaprocessor escrito en C puro.**
 
-[![Licencia](https://img.shields.io/badge/Licencia-Apache%202.0-blue.svg)](LICENSE)
+[![Licencia](https://img.shields.io/badge/Licencia-GPL%20v3-blue.svg)](LICENSE)
 [![Lenguaje](https://img.shields.io/badge/Lenguaje-C99-orange.svg)](https://en.cppreference.com/w/c/99)
 [![Build System](https://img.shields.io/badge/Build-CMake-064F8C.svg)](https://cmake.org/)
 
@@ -107,7 +107,7 @@ Megaprocessor-ASM-C/
 │   └── megap_asm.h     # Header principal con definiciones
 ├── CMakeLists.txt      # Configuración de CMake
 ├── README.md           # Este archivo
-├── LICENSE             # Licencia Apache 2.0
+├── LICENSE             # Licencia GPL-3.0
 └── .gitignore          # Archivos ignorados por Git
 ```
 
@@ -163,9 +163,25 @@ Las contribuciones son bienvenidas. Si deseas contribuir:
 
 ## 📄 Licencia
 
-Este proyecto está licenciado bajo la **Apache License 2.0**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+Este proyecto está licenciado bajo la **GNU General Public License v3.0**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
 
-Copyright 2026 Daniel Elias Diamon Vazquez
+```
+Megaprocessor ASM - Ensamblador para el Megaprocessor
+Copyright (C) 2026 Daniel Elias Diamon Vazquez
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+```
 
 ## 👤 Autor
 
@@ -179,6 +195,7 @@ Copyright 2026 Daniel Elias Diamon Vazquez
 - **James Newman** - Creador del Megaprocessor físico
 - Comunidad de desarrolladores de ensambladores y compiladores
 - Proyecto SDCC por inspiración en arquitectura de compiladores
+- Comunidad de software libre y código abierto
 
 ## 📚 Recursos Adicionales
 
@@ -186,6 +203,7 @@ Copyright 2026 Daniel Elias Diamon Vazquez
 - [Documentación del Set de Instrucciones](http://www.megaprocessor.com/instruction.html)
 - [CMake Documentation](https://cmake.org/documentation/)
 - [C99 Standard Reference](https://en.cppreference.com/w/c/99)
+- [GNU GPL v3 License](https://www.gnu.org/licenses/gpl-3.0.html)
 
 ## 🐛 Reporte de Bugs
 
@@ -198,3 +216,5 @@ Si encuentras algún bug, por favor abre un [issue](https://github.com/Danielk10
 ---
 
 **¡Hecho con ❤️ para la comunidad del Megaprocessor!**
+
+*Este es software libre. Siéntete libre de usar, modificar y distribuir bajo los términos de la GPL-3.0.*
