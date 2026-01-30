@@ -1,4 +1,4 @@
-#include "megaprocessor_asm.h"
+#include "megap_asm.h"
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {

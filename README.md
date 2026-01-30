@@ -71,7 +71,7 @@ cmake --build .
 
 ```bash
 # Ejecutar el ensamblador
-./megaprocessor-asm archivo.asm
+./megap-asm archivo.asm
 
 # Esto genera:
 # - archivo.asm.bin (código máquina binario)
@@ -104,7 +104,7 @@ Megaprocessor-ASM-C/
 │   ├── parser.c        # Análisis sintáctico
 │   └── codegen.c       # Generación de código máquina
 ├── include/
-│   └── megaprocessor_asm.h  # Definiciones y prototipos
+│   └── megap_asm.h     # Header principal con definiciones
 ├── CMakeLists.txt      # Configuración de CMake
 ├── README.md           # Este archivo
 ├── LICENSE             # Licencia Apache 2.0
