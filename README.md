@@ -1,200 +1,158 @@
-# Megaprocessor ASM - Ensamblador en C
+# Megaprocessor ASM en C (CLI)
 
-**Ensamblador de código abierto para el Megaprocessor escrito en C puro.**
+Ensamblador del **Megaprocessor** migrado a **C puro (C99)**, orientado a uso por línea de comandos y con build multiplataforma.
 
-[![Licencia](https://img.shields.io/badge/Licencia-Apache%202.0-blue.svg)](LICENSE)
-[![Lenguaje](https://img.shields.io/badge/Lenguaje-C99-orange.svg)](https://en.cppreference.com/w/c/99)
-[![Build System](https://img.shields.io/badge/Build-CMake-064F8C.svg)](https://cmake.org/)
+- Lenguaje: C99
+- Build: CMake
+- Salida: Intel HEX (`.hex`) y listado (`.lst`)
+- Plataformas objetivo: Linux, Windows, macOS (y core reutilizable para Android NDK)
 
-## 📋 Descripción
+## Estado actual
 
-Este proyecto es un **ensamblador completo** para el [Megaprocessor](http://www.megaprocessor.com/), un procesador de 16 bits construido con componentes discretos creado por James Newman. El Megaprocessor es un procesador físico gigante donde cada transistor es visible, diseñado con fines educativos para mostrar cómo funciona un CPU por dentro.
+El ensamblador en C implementa el flujo principal del ensamblador C++ de referencia:
 
-Este ensamblador traduce código assembly del Megaprocessor a código máquina binario que puede ejecutarse en el procesador físico o en simuladores.
+- Preprocesado de `INCLUDE` (incluyendo includes recursivos)
+- Ensamblado en dos pasadas (resolución de símbolos + generación de código)
+- Evaluación de expresiones (`+ - * / << >>`, `()`, `$`, literales y símbolos)
+- Directivas (`ORG`, `EQU`, `DB`, `DW`, `DL`, `DM`, `DS`)
+- Codificación de instrucciones del set utilizado por los casos de verificación
+- Generación de Intel HEX y listing (`.lst`)
 
-## ✨ Características
+## Requisitos
 
-- ✅ **Análisis léxico completo**: Tokenización de código assembly
-- ✅ **Parser sintáctico**: Validación de sintaxis y estructura
-- ✅ **Generador de código**: Traducción a bytecode del Megaprocessor
-- ✅ **Manejo de etiquetas**: Soporte para saltos y referencias
-- ✅ **Detección de errores**: Mensajes claros de errores de sintaxis
-- ✅ **Multiplataforma**: Compatible con Linux, Windows y macOS
-- ✅ **Sin dependencias externas**: Solo requiere un compilador C estándar
+- CMake 3.10+
+- Compilador C compatible con C99
+  - Linux: GCC o Clang
+  - macOS: Apple Clang (Xcode Command Line Tools)
+  - Windows: MSVC o MinGW-w64
 
-## 🏗️ Arquitectura del Megaprocessor
+## Compilar (CLI)
 
-El Megaprocessor es un procesador de 16 bits con:
-- **Arquitectura**: Von Neumann modificada
-- **Ancho de palabra**: 16 bits
-- **Registros**: 8 registros de propósito general
-- **Memoria**: Espacio de direccionamiento de 64KB
-- **Set de instrucciones**: RISC simplificado con ~40 instrucciones
-
-Para más información sobre el Megaprocessor, visita: http://www.megaprocessor.com/
-
-## 🚀 Compilación
-
-### Requisitos
-
-- **Compilador C**: GCC 4.8+ o Clang 3.5+
-- **CMake**: 3.10 o superior
-- **Sistema operativo**: Linux, macOS, Windows (con MinGW/MSYS2)
-
-### En Linux/macOS
+### Linux
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/Danielk10/Megaprocessor-ASM-C.git
-cd Megaprocessor-ASM-C
-
-# Crear directorio de build
-mkdir build
-cd build
-
-# Configurar y compilar
-cmake ..
-cmake --build .
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
 ```
 
-### En Windows (MinGW/MSYS2)
+Binario generado:
 
 ```bash
-# Desde MSYS2 terminal
-mkdir build
-cd build
-cmake -G "MinGW Makefiles" ..
-cmake --build .
+./build/megap-asm
 ```
 
-## 📖 Uso
+### macOS
 
 ```bash
-# Ejecutar el ensamblador
-./megap-asm archivo.asm
-
-# Esto genera:
-# - archivo.asm.bin (código máquina binario)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
 ```
 
-### Ejemplo de código assembly
+Binario generado:
 
-```asm
-; Programa de ejemplo para Megaprocessor
-; Suma dos números y almacena el resultado
-
-start:
-    LOAD R0, #5        ; Cargar 5 en R0
-    LOAD R1, #10       ; Cargar 10 en R1
-    ADD R2, R0, R1     ; R2 = R0 + R1
-    STORE R2, result   ; Guardar en memoria
-    HALT               ; Detener ejecución
-
-result:
-    .word 0            ; Espacio para resultado
+```bash
+./build/megap-asm
 ```
 
-## 📂 Estructura del Proyecto
+### Windows (Developer Command Prompt - MSVC)
 
-```
-Megaprocessor-ASM-C/
-├── src/
-│   ├── main.c          # Punto de entrada del programa
-│   ├── lexer.c         # Análisis léxico (tokenización)
-│   ├── parser.c        # Análisis sintáctico
-│   └── codegen.c       # Generación de código máquina
-├── include/
-│   └── megap_asm.h     # Header principal con definiciones
-├── CMakeLists.txt      # Configuración de CMake
-├── README.md           # Este archivo
-├── LICENSE             # Licencia Apache-2.0
-└── .gitignore          # Archivos ignorados por Git
+```bat
+cmake -S . -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 
-## 🛠️ Desarrollo
+Binario generado:
 
-### Compilador Recomendado
+```bat
+build\megap-asm.exe
+```
 
-- **Linux**: GCC (GNU Compiler Collection)
-- **macOS**: Clang (incluido con Xcode Command Line Tools)
-- **Windows**: MinGW-w64 o Clang
+### Windows (MSYS2/MinGW)
 
-### Sistema de Build
+```bash
+cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
 
-Este proyecto utiliza **CMake** como sistema de build, lo que facilita:
-- ✅ Compilación multiplataforma
-- ✅ Detección automática de compiladores
-- ✅ Configuración sencilla de flags de compilación
-- ✅ Fácil integración con IDEs (CLion, Visual Studio Code, etc.)
+Binario generado:
 
-### Estándar de C
+```bash
+./build/megap-asm.exe
+```
 
-El código está escrito en **C99** (ISO/IEC 9899:1999) para:
-- Máxima portabilidad
-- Compatibilidad con compiladores modernos
-- Características modernas sin complejidad innecesaria
+## Instalación del CLI
 
-## 🎯 Hoja de Ruta (Roadmap)
+Se agregó target de instalación en CMake.
 
-- [x] Estructura básica del proyecto
-- [x] Configuración de CMake
-- [x] Analizador léxico base
-- [ ] Parser completo de instrucciones
-- [ ] Generador de código para todas las instrucciones del Megaprocessor
-- [ ] Tabla de símbolos para etiquetas
-- [ ] Segunda pasada del ensamblador (resolución de referencias)
-- [ ] Soporte para directivas (`.org`, `.word`, `.byte`)
-- [ ] Generación de archivos de listado
-- [ ] Modo de depuración con símbolos
-- [ ] Optimizaciones básicas
-- [ ] Suite de pruebas unitarias
-- [ ] Documentación completa del set de instrucciones
-- [ ] Integración con simulador del Megaprocessor
+### Linux/macOS
 
-## 🤝 Contribuciones
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+sudo cmake --install build --prefix /usr/local
+```
 
-Las contribuciones son bienvenidas. Si deseas contribuir:
+Después:
 
-1. Fork el proyecto
-2. Crea una rama para tu característica (`git checkout -b feature/nueva-caracteristica`)
-3. Commit tus cambios (`git commit -am 'Añadir nueva característica'`)
-4. Push a la rama (`git push origin feature/nueva-caracteristica`)
-5. Abre un Pull Request
+```bash
+megap-asm --help
+```
 
-## 📄 Licencia
+> Nota: actualmente el CLI no imprime ayuda extensa; sin argumentos muestra uso.
 
-Este proyecto está licenciado bajo la **Apache License 2.0**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+### Windows
 
-## 👤 Autor
+Instalación en carpeta local:
 
-**Daniel Elias Diamon Vazquez**
-- GitHub: [@Danielk10](https://github.com/Danielk10)
-- Email: danielpdiamon@gmail.com
-- Ubicación: Venezuela
+```bat
+cmake -S . -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+cmake --install build --prefix C:\tools\megap-asm
+```
 
-## 🙏 Agradecimientos
+Agrega `C:\tools\megap-asm\bin` al `PATH` para invocarlo globalmente.
 
-- **James Newman** - Creador del Megaprocessor físico
-- Comunidad de desarrolladores de ensambladores y compiladores
-- Proyecto SDCC por inspiración en arquitectura de compiladores
-- Comunidad de software libre y código abierto
+## Uso
 
-## 📚 Recursos Adicionales
+```bash
+megap-asm programa.asm
+```
 
-- [Megaprocessor Official Website](http://www.megaprocessor.com/)
-- [Documentación del Set de Instrucciones](http://www.megaprocessor.com/instruction.html)
-- [CMake Documentation](https://cmake.org/documentation/)
-- [C99 Standard Reference](https://en.cppreference.com/w/c/99)
-- [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+Genera por defecto:
 
-## 🐛 Reporte de Bugs
+- `programa.hex`
 
-Si encuentras algún bug, por favor abre un [issue](https://github.com/Danielk10/Megaprocessor-ASM-C/issues) con:
-- Descripción del problema
-- Pasos para reproducir
-- Comportamiento esperado vs. observado
-- Versión del compilador y sistema operativo
+Opciones:
 
----
+```bash
+megap-asm programa.asm --out salida.hex
+megap-asm programa.asm --lst
+megap-asm programa.asm --lst --lst-out salida.lst
+```
 
-**¡Hecho con ❤️ para la comunidad del Megaprocessor!**
+## Includes
+
+El CLI intenta cargar:
+
+1. `Megaprocessor_defs.asm` (si existe)
+2. Includes declarados en el `.asm`
+3. Resolución por carpeta del asm, subcarpeta `includes/`, y ruta directa del nombre
+
+## Estructura actual relevante
+
+```text
+include/megap_asm.h   API pública del ensamblador en C
+src/assembler.c       Core del ensamblador (2-pass + HEX + LST)
+src/main.c            CLI y carga de archivos/includes
+CMakeLists.txt        Build e instalación
+```
+
+## Verificación recomendada
+
+1. Compilar el proyecto.
+2. Ejecutar ensamblado sobre casos `.asm`.
+3. Comparar los `.hex` contra referencia y contra salida del ensamblador C++.
+
+## Licencia
+
+Apache-2.0. Ver `LICENSE`.
