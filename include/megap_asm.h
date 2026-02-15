@@ -1,54 +1,67 @@
 #ifndef MEGAP_ASM_H
 #define MEGAP_ASM_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
+#include <stddef.h>
 
-/* Lexer */
-typedef enum {
-    TOKEN_LABEL,
-    TOKEN_INSTRUCTION,
-    TOKEN_REGISTER,
-    TOKEN_NUMBER,
-    TOKEN_COMMA,
-    TOKEN_NEWLINE,
-    TOKEN_EOF,
-    TOKEN_ERROR
-} TokenType;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
-    TokenType type;
-    char *value;
-    int line;
-} Token;
+    char *name;
+    int32_t value;
+    int type;
+    int is_defined;
+} AsmSymbol;
 
-Token* lexer_next_token(const char **input, int *line);
-void free_token(Token *token);
-
-/* Parser */
 typedef struct {
-    char *label;
-    char *instruction;
-    char *operands[3];
-    int operand_count;
-    int line;
-} Instruction;
+    uint16_t address;
+    uint8_t *bytes;
+    size_t byte_count;
+    size_t byte_cap;
+    char *original_line;
+    int line_number;
+    int is_directive;
+} AsmInstruction;
 
-Instruction* parser_parse_line(Token **tokens, int *token_count);
-void free_instruction(Instruction *inst);
-
-/* Code Generator */
 typedef struct {
-    uint8_t *code;
-    size_t size;
-    size_t capacity;
-} CodeBuffer;
+    char *name_upper;
+    char *content;
+} IncludeEntry;
 
-CodeBuffer* codegen_init();
-void codegen_generate(CodeBuffer *buf, Instruction *inst);
-void codegen_write_output(CodeBuffer *buf, const char *filename);
-void codegen_free(CodeBuffer *buf);
+typedef struct {
+    AsmSymbol *symbols;
+    size_t symbol_count;
+    size_t symbol_cap;
 
-#endif /* MEGAP_ASM_H */
+    AsmInstruction *instructions;
+    size_t inst_count;
+    size_t inst_cap;
+
+    IncludeEntry *includes;
+    size_t include_count;
+    size_t include_cap;
+
+    char *listing;
+    size_t listing_len;
+    size_t listing_cap;
+
+    uint16_t current_address;
+    char error[512];
+} Assembler;
+
+void assembler_init(Assembler *as);
+void assembler_free(Assembler *as);
+void assembler_set_include_files(Assembler *as, const IncludeEntry *entries, size_t count);
+int assembler_assemble(Assembler *as, const char *source, char **hex_out);
+const char *assembler_get_listing(const Assembler *as);
+
+char *asm_read_file(const char *path);
+int asm_write_file(const char *path, const char *content);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
