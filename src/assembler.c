@@ -79,9 +79,70 @@ static int split(const char *s, char delim, char ***out, size_t *count) {
     return 1;
 }
 
+static int split_lines_raw(const char *s, char ***out, size_t *count) {
+    char **items = NULL;
+    size_t n = 0;
+    size_t cap = 0;
+    size_t len = strlen(s);
+    size_t start = 0;
+
+    for (size_t i = 0; i <= len; ++i) {
+        if (i == len || s[i] == '\n') {
+            size_t tok_len = i - start;
+            char *tok = (char *)malloc(tok_len + 1);
+            if (!tok) return 0;
+            memcpy(tok, s + start, tok_len);
+            tok[tok_len] = '\0';
+
+            if (n == cap) {
+                cap = ARRAY_GROW(cap);
+                char **ni = (char **)realloc(items, cap * sizeof(char *));
+                if (!ni) { free(tok); return 0; }
+                items = ni;
+            }
+            items[n++] = tok;
+            start = i + 1;
+        }
+    }
+
+    *out = items;
+    *count = n;
+    return 1;
+}
+
 static void free_split(char **items, size_t count) {
     for (size_t i = 0; i < count; i++) free(items[i]);
     free(items);
+}
+
+static char *strip_comments_copy(const char *s, int *in_block_comment) {
+    size_t n = strlen(s);
+    char *out = (char *)malloc(n + 1);
+    if (!out) return NULL;
+    size_t j = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (in_block_comment && *in_block_comment) {
+            if (s[i] == '*' && i + 1 < n && s[i + 1] == '/') {
+                *in_block_comment = 0;
+                i++;
+            }
+            continue;
+        }
+        if (s[i] == '/' && i + 1 < n && s[i + 1] == '*') {
+            if (in_block_comment) *in_block_comment = 1;
+            i++;
+            continue;
+        }
+        if (s[i] == '/' && i + 1 < n && s[i + 1] == '/') break;
+        if (s[i] == ';') break;
+        out[j++] = s[i];
+    }
+    out[j] = '\0';
+    return out;
+}
+
+static void normalize_empty_operands(char **ops, size_t *count) {
+    if (ops && count && *count == 1 && ops[0][0] == '\0') *count = 0;
 }
 
 static int symbol_find(const Assembler *as, const char *upper) {
@@ -320,13 +381,11 @@ static char *normalize_include_name(const char *tok) {
 
 static int preprocess_includes(Assembler *as, char **lines, size_t line_count, char ***out_lines, size_t *out_count, char **stack, size_t stack_n) {
     char **expanded = NULL; size_t exp_n = 0, exp_cap = 0;
+    int in_block_comment = 0;
     for (size_t i = 0; i < line_count; i++) {
         char *raw = lines[i];
-        char *parse = xstrdup(raw ? raw : "");
-        if (!parse) return 0;
-        char *c = strstr(parse, "//"); if (c) *c = '\0';
-        c = strchr(parse, ';'); if (c) *c = '\0';
-        char *t = trim_copy(parse); free(parse);
+        char *parse = strip_comments_copy(raw ? raw : "", &in_block_comment);
+        char *t = trim_copy(parse ? parse : ""); free(parse);
         if (!t) return 0;
         if (*t == '\0') {
             if (exp_n == exp_cap) { exp_cap = ARRAY_GROW(exp_cap); expanded = (char **)realloc(expanded, exp_cap * sizeof(char *)); }
@@ -350,7 +409,7 @@ static int preprocess_includes(Assembler *as, char **lines, size_t line_count, c
             int idx = include_find(as, iname);
             const char *content = as->includes[idx].content;
             char **inc_lines = NULL; size_t inc_n = 0;
-            split(content, '\n', &inc_lines, &inc_n);
+            split_lines_raw(content, &inc_lines, &inc_n);
             char **new_stack = (char **)malloc((stack_n + 1) * sizeof(char *));
             for (size_t si = 0; si < stack_n; si++) new_stack[si] = stack[si];
             new_stack[stack_n] = iname;
@@ -485,12 +544,12 @@ static int encode_ldst(Assembler *as, const char *mn, const char *op1, const cha
 
 static int pass1(Assembler *as, char **lines, size_t n) {
     as->current_address = 0;
+    int in_block_comment = 0;
     typedef struct { char *name; char *expr; int line; } Pending;
     Pending *pend = NULL; size_t pn = 0, pc = 0;
     for (size_t i = 0; i < n; i++) {
         int line = (int)i + 1;
-        char *work = xstrdup(lines[i]);
-        char *c = strstr(work, "//"); if (c) *c = '\0'; c = strchr(work, ';'); if (c) *c = '\0';
+        char *work = strip_comments_copy(lines[i], &in_block_comment);
         char *t = trim_copy(work); free(work);
         if (!t || !*t) { free(t); continue; }
 
@@ -612,10 +671,10 @@ static int generate_listing_line(Assembler *as, const AsmInstruction *inst) {
 
 static int pass2(Assembler *as, char **lines, size_t n) {
     as->current_address = 0;
+    int in_block_comment = 0;
     for (size_t i = 0; i < n; i++) {
         int line_num = (int)i + 1;
-        char *line = xstrdup(lines[i]);
-        char *c = strstr(line, "//"); if (c) *c = '\0'; c = strchr(line, ';'); if (c) *c = '\0';
+        char *line = strip_comments_copy(lines[i], &in_block_comment);
         char *t = trim_copy(line);
         AsmInstruction inst; memset(&inst, 0, sizeof(inst));
         inst.line_number = line_num; inst.original_line = xstrdup(lines[i]); inst.address = as->current_address;
@@ -634,13 +693,27 @@ static int pass2(Assembler *as, char **lines, size_t n) {
             continue;
         }
 
-        char *colon = strchr(t, ':'); if (colon) { char *r = trim_copy(colon + 1); free(t); t = r; }
+        char label_name[128] = {0};
+        char *colon = strchr(t, ':');
+        if (colon) {
+            *colon = '\0';
+            char *label = trim_copy(t);
+            if (label && *label) {
+                snprintf(label_name, sizeof(label_name), "%s", label);
+                symbol_set(as, label_name, as->current_address, 0, 1);
+            }
+            free(label);
+            char *r = trim_copy(colon + 1);
+            free(t);
+            t = r;
+        }
         if (!t || !*t) { append_inst(as, &inst); free(t); free(line); continue; }
         char mn[64] = {0}; sscanf(t, "%63s", mn); str_upper(mn);
         int is_wt = 0; size_t mlen = strlen(mn); if (mlen > 3 && !strcmp(mn + mlen - 3, ".WT")) { mn[mlen - 3] = '\0'; is_wt = 1; }
 
         char *rest = strchr(t, ' ');
         char **ops = NULL; size_t on = 0; split(rest ? rest + 1 : "", ',', &ops, &on);
+        normalize_empty_operands(ops, &on);
         const char *op1 = on > 0 ? ops[0] : "";
         const char *op2 = on > 1 ? ops[1] : "";
 
@@ -648,6 +721,7 @@ static int pass2(Assembler *as, char **lines, size_t n) {
         else if (!strcmp(mn, "ORG")) {
             int32_t v; if (!eval_expr(as, op1, &v)) { free_split(ops,on); free(t); free(line); return 0; }
             as->current_address = (uint16_t)v; inst.address = as->current_address; inst.is_directive = 1;
+            if (label_name[0]) symbol_set(as, label_name, as->current_address, 0, 1);
         } else if (!strcmp(mn, "DB") || !strcmp(mn, "DW") || !strcmp(mn, "DL")) {
             if (on == 0) { push_byte(&inst, 0); if (!strcmp(mn, "DW") || !strcmp(mn, "DL")) push_byte(&inst, 0); if (!strcmp(mn, "DL")) { push_byte(&inst,0); push_byte(&inst,0);} }
             else for (size_t k=0;k<on;k++) { int32_t v; if (!eval_expr(as, ops[k], &v)) { free_split(ops,on); free(t); free(line); return 0;} push_byte(&inst,(uint8_t)(v&0xFF)); if (!strcmp(mn,"DW")||!strcmp(mn,"DL")) push_byte(&inst,(uint8_t)((v>>8)&0xFF)); if(!strcmp(mn,"DL")){push_byte(&inst,(uint8_t)((v>>16)&0xFF));push_byte(&inst,(uint8_t)((v>>24)&0xFF));}}
@@ -745,7 +819,7 @@ int assembler_assemble(Assembler *as, const char *source, char **hex_out) {
     as->listing_len = 0; if (as->listing) as->listing[0] = '\0';
 
     char **lines = NULL; size_t line_n = 0;
-    if (!split(source, '\n', &lines, &line_n)) return 0;
+    if (!split_lines_raw(source, &lines, &line_n)) return 0;
     char **expanded = NULL; size_t exp_n = 0;
     if (!preprocess_includes(as, lines, line_n, &expanded, &exp_n, NULL, 0)) { free_split(lines, line_n); return 0; }
     free_split(lines, line_n);
