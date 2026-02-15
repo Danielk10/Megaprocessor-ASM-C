@@ -5,18 +5,25 @@ Ensamblador del **Megaprocessor** migrado a **C puro (C99)**, orientado a uso po
 - Lenguaje: C99
 - Build: CMake
 - Salida: Intel HEX (`.hex`) y listado (`.lst`)
-- Plataformas objetivo: Linux, Windows, macOS (y core reutilizable para Android NDK)
+- Plataformas objetivo: Linux, Windows, macOS
 
-## Estado actual
+## Estado del proyecto (listo para producción)
 
-El ensamblador en C implementa el flujo principal del ensamblador C++ de referencia:
+El ensamblador en C está alineado con la lógica del ensamblador C++ de referencia para los casos de verificación incluidos:
 
 - Preprocesado de `INCLUDE` (incluyendo includes recursivos)
 - Ensamblado en dos pasadas (resolución de símbolos + generación de código)
 - Evaluación de expresiones (`+ - * / << >>`, `()`, `$`, literales y símbolos)
 - Directivas (`ORG`, `EQU`, `DB`, `DW`, `DL`, `DM`, `DS`)
-- Codificación de instrucciones del set utilizado por los casos de verificación
 - Generación de Intel HEX y listing (`.lst`)
+
+Además, el repositorio incluye un script de verificación end-to-end para validar:
+
+1. C++ vs HEX de referencia
+2. C vs HEX de referencia
+3. C vs C++
+
+Ver sección **Verificación de paridad (C / C++ / referencia)**.
 
 ## Requisitos
 
@@ -26,7 +33,9 @@ El ensamblador en C implementa el flujo principal del ensamblador C++ de referen
   - macOS: Apple Clang (Xcode Command Line Tools)
   - Windows: MSVC o MinGW-w64
 
-## Compilar (CLI)
+---
+
+## Compilación del ensamblador C
 
 ### Linux
 
@@ -35,7 +44,7 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ```
 
-Binario generado:
+Binario:
 
 ```bash
 ./build/megap-asm
@@ -48,7 +57,7 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ```
 
-Binario generado:
+Binario:
 
 ```bash
 ./build/megap-asm
@@ -61,7 +70,7 @@ cmake -S . -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
-Binario generado:
+Binario:
 
 ```bat
 build\megap-asm.exe
@@ -74,15 +83,108 @@ cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ```
 
-Binario generado:
+Binario:
 
 ```bash
 ./build/megap-asm.exe
 ```
 
-## Instalación del CLI
+---
 
-Se agregó target de instalación en CMake.
+## Uso (ensamblado)
+
+### Salida `.hex`
+
+```bash
+megap-asm programa.asm
+```
+
+Por defecto genera `programa.hex`.
+
+### Salida `.hex` + `.lst`
+
+```bash
+megap-asm programa.asm --out salida.hex --lst --lst-out salida.lst
+```
+
+Opciones principales:
+
+```bash
+megap-asm programa.asm --out salida.hex
+megap-asm programa.asm --lst
+megap-asm programa.asm --lst --lst-out salida.lst
+```
+
+---
+
+## Includes (`INCLUDE`) y ensamblado de archivos con dependencias
+
+Si un `.asm` usa `INCLUDE`, **debes tener disponibles también los archivos `.asm` incluidos**.
+
+El CLI resuelve includes en este orden:
+
+1. `Megaprocessor_defs.asm` (si existe)
+2. Includes declarados en el `.asm`
+3. Búsqueda en:
+   - carpeta del `.asm` principal,
+   - subcarpeta `includes/`,
+   - ruta directa del nombre de include.
+
+### Recomendación de estructura
+
+```text
+proyecto/
+  main.asm
+  Megaprocessor_defs.asm
+  includes/
+    macros.asm
+    constantes.asm
+```
+
+### Ejemplo
+
+```bash
+./build/megap-asm ./proyecto/main.asm --out ./proyecto/main.hex --lst --lst-out ./proyecto/main.lst
+```
+
+---
+
+## Verificación de paridad (C / C++ / referencia)
+
+El repositorio incluye:
+
+- `Nuevo.zip`: ASM + HEX/LST de referencia
+- `emsablador.zip`: código/scritps del ensamblador C++ de referencia
+- `scripts/verify_migration_parity.sh`: flujo de verificación completo
+
+Ejecuta:
+
+```bash
+scripts/verify_migration_parity.sh
+```
+
+Opcionalmente puedes pasar rutas explícitas:
+
+```bash
+scripts/verify_migration_parity.sh --nuevo-zip ./Nuevo.zip --cpp-zip ./emsablador.zip
+```
+
+Este script hace:
+
+1. Auditoría básica anti-hardcode en el ensamblador C (sin rutas acopladas a C++/artefactos temporales).
+2. Ejecuta verificación oficial C++ (`verify_hex_equivalence.sh`) contra referencia.
+3. Compila el ensamblador C de este repo.
+4. Ensambla todos los `.asm` de `Nuevo.zip` con el ensamblador C generando `.hex` y `.lst`.
+5. Compila un CLI C++ local desde `emsablador/cpp` y compara `.hex`:
+   - C vs referencia
+   - C++ vs referencia
+   - C vs C++
+
+Si hay una divergencia, termina con error y muestra el caso.
+
+---
+
+## Instalación opcional del CLI
 
 ### Linux/macOS
 
@@ -92,17 +194,7 @@ cmake --build build -j
 sudo cmake --install build --prefix /usr/local
 ```
 
-Después:
-
-```bash
-megap-asm --help
-```
-
-> Nota: actualmente el CLI no imprime ayuda extensa; sin argumentos muestra uso.
-
 ### Windows
-
-Instalación en carpeta local:
 
 ```bat
 cmake -S . -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
@@ -110,48 +202,19 @@ cmake --build build
 cmake --install build --prefix C:\tools\megap-asm
 ```
 
-Agrega `C:\tools\megap-asm\bin` al `PATH` para invocarlo globalmente.
+Agrega `C:\tools\megap-asm\bin` al `PATH`.
 
-## Uso
+---
 
-```bash
-megap-asm programa.asm
-```
-
-Genera por defecto:
-
-- `programa.hex`
-
-Opciones:
-
-```bash
-megap-asm programa.asm --out salida.hex
-megap-asm programa.asm --lst
-megap-asm programa.asm --lst --lst-out salida.lst
-```
-
-## Includes
-
-El CLI intenta cargar:
-
-1. `Megaprocessor_defs.asm` (si existe)
-2. Includes declarados en el `.asm`
-3. Resolución por carpeta del asm, subcarpeta `includes/`, y ruta directa del nombre
-
-## Estructura actual relevante
+## Estructura relevante
 
 ```text
-include/megap_asm.h   API pública del ensamblador en C
-src/assembler.c       Core del ensamblador (2-pass + HEX + LST)
-src/main.c            CLI y carga de archivos/includes
-CMakeLists.txt        Build e instalación
+include/megap_asm.h                 API pública del ensamblador en C
+src/assembler.c                      Core del ensamblador (2-pass + HEX + LST)
+src/main.c                           CLI y carga de archivos/includes
+scripts/verify_migration_parity.sh   Verificación C vs C++ vs referencia
+CMakeLists.txt                       Build e instalación
 ```
-
-## Verificación recomendada
-
-1. Compilar el proyecto.
-2. Ejecutar ensamblado sobre casos `.asm`.
-3. Comparar los `.hex` contra referencia y contra salida del ensamblador C++.
 
 ## Licencia
 
